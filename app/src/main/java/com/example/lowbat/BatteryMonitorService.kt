@@ -28,90 +28,148 @@ class BatteryMonitorService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        startForeground(NOTIFICATION_ID, createNotification("Monitoring battery..."))
+        startForeground(NOTIFICATION_ID, createNotification(100))
         registerBatteryReceiver()
     }
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Battery Monitor",
-                NotificationManager.IMPORTANCE_MIN
-            ).apply {
-                description = "Monitors battery status"
-                setShowBadge(false)
-                enableVibration(false)
-                setSound(null, null)
-            }
+            val channel =
+                    NotificationChannel(
+                                    CHANNEL_ID,
+                                    "Battery Monitor",
+                                    NotificationManager.IMPORTANCE_MIN
+                            )
+                            .apply {
+                                description = "Monitors battery status"
+                                setShowBadge(false)
+                                enableVibration(false)
+                                setSound(null, null)
+                            }
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager.createNotificationChannel(channel)
         }
     }
 
-    private fun createNotification(text: String): Notification {
+    private fun createNotification(batteryPct: Int): Notification {
         val intent = Intent(this, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val pendingIntent =
+                PendingIntent.getActivity(
+                        this,
+                        0,
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Battery Monitor")
-            .setContentText(text)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentIntent(pendingIntent)
-            .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_MIN)
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .setVisibility(NotificationCompat.VISIBILITY_SECRET)
-            .build()
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle("Battery $batteryPct%")
+                .setProgress(100, batteryPct, false)
+                .setContentIntent(pendingIntent)
+                .setOngoing(true)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setCategory(NotificationCompat.CATEGORY_SERVICE)
+                .setVisibility(NotificationCompat.VISIBILITY_SECRET)
+                .build()
     }
 
     private fun registerBatteryReceiver() {
-        batteryReceiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context?, intent: Intent?) {
-                if (intent?.action == Intent.ACTION_BATTERY_CHANGED) {
-                    val level = intent.getIntExtra("level", -1)
-                    val scale = intent.getIntExtra("scale", -1)
-                    val batteryPct = if (level >= 0 && scale > 0) {
-                        (level * 100) / scale
-                    } else {
-                        -1
-                    }
+        batteryReceiver =
+                object : BroadcastReceiver() {
+                    override fun onReceive(context: Context?, intent: Intent?) {
+                        if (intent?.action == Intent.ACTION_BATTERY_CHANGED) {
+                            val level = intent.getIntExtra("level", -1)
+                            val scale = intent.getIntExtra("scale", -1)
+                            val status =
+                                    intent.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1)
+                            val isCharging =
+                                    status == android.os.BatteryManager.BATTERY_STATUS_CHARGING ||
+                                            status == android.os.BatteryManager.BATTERY_STATUS_FULL
 
-                    val notificationManager = getSystemService(NotificationManager::class.java)
-                    notificationManager.notify(NOTIFICATION_ID, createNotification("Battery: $batteryPct%"))
+                            val batteryPct =
+                                    if (level >= 0 && scale > 0) {
+                                        (level * 100) / scale
+                                    } else {
+                                        -1
+                                    }
 
-                    when {
-                        batteryPct <= 10 && lastShownLevel != 10 -> {
-                            if (System.currentTimeMillis() - lastPopupTime > POPUP_COOLDOWN) {
-                                lastShownLevel = 10
-                                lastPopupTime = System.currentTimeMillis()
-                                showLowBatteryPopup(batteryPct)
+                            // If charging, close any existing popup and update notification
+                            if (isCharging) {
+                                LowBatteryActivity.currentInstance?.finishAndRemoveTask()
+                                lastShownLevel = null
+                                val notificationManager =
+                                        getSystemService(NotificationManager::class.java)
+                                notificationManager.notify(
+                                        NOTIFICATION_ID,
+                                        createNotification(batteryPct)
+                                )
+                                return
                             }
-                        }
-                        batteryPct <= 15 && batteryPct > 10 && lastShownLevel != 15 -> {
-                            if (System.currentTimeMillis() - lastPopupTime > POPUP_COOLDOWN) {
-                                lastShownLevel = 15
-                                lastPopupTime = System.currentTimeMillis()
-                                showLowBatteryPopup(batteryPct)
+
+                            val notificationManager =
+                                    getSystemService(NotificationManager::class.java)
+                            notificationManager.notify(
+                                    NOTIFICATION_ID,
+                                    createNotification(batteryPct)
+                            )
+
+                            when {
+                                batteryPct <= 2 && lastShownLevel != 2 -> {
+                                    if (System.currentTimeMillis() - lastPopupTime > POPUP_COOLDOWN) {
+                                        lastShownLevel = 2
+                                        lastPopupTime = System.currentTimeMillis()
+                                        showLowBatteryPopup(batteryPct)
+                                    }
+                                }
+                                batteryPct <= 4 && batteryPct > 2 && lastShownLevel != 4 -> {
+                                    if (System.currentTimeMillis() - lastPopupTime > POPUP_COOLDOWN) {
+                                        lastShownLevel = 4
+                                        lastPopupTime = System.currentTimeMillis()
+                                        showLowBatteryPopup(batteryPct)
+                                    }
+                                }
+                                batteryPct <= 6 && batteryPct > 4 && lastShownLevel != 6 -> {
+                                    if (System.currentTimeMillis() - lastPopupTime > POPUP_COOLDOWN) {
+                                        lastShownLevel = 6
+                                        lastPopupTime = System.currentTimeMillis()
+                                        showLowBatteryPopup(batteryPct)
+                                    }
+                                }
+                                batteryPct <= 8 && batteryPct > 6 && lastShownLevel != 8 -> {
+                                    if (System.currentTimeMillis() - lastPopupTime > POPUP_COOLDOWN) {
+                                        lastShownLevel = 8
+                                        lastPopupTime = System.currentTimeMillis()
+                                        showLowBatteryPopup(batteryPct)
+                                    }
+                                }
+                                batteryPct <= 10 && batteryPct > 8 && lastShownLevel != 10 -> {
+                                    if (System.currentTimeMillis() - lastPopupTime > POPUP_COOLDOWN) {
+                                        lastShownLevel = 10
+                                        lastPopupTime = System.currentTimeMillis()
+                                        showLowBatteryPopup(batteryPct)
+                                    }
+                                }
+                                batteryPct <= 15 && batteryPct > 10 && lastShownLevel != 15 -> {
+                                    if (System.currentTimeMillis() - lastPopupTime > POPUP_COOLDOWN) {
+                                        lastShownLevel = 15
+                                        lastPopupTime = System.currentTimeMillis()
+                                        showLowBatteryPopup(batteryPct)
+                                    }
+                                }
+                                batteryPct <= 20 && batteryPct > 15 && lastShownLevel != 20 -> {
+                                    if (System.currentTimeMillis() - lastPopupTime > POPUP_COOLDOWN) {
+                                        lastShownLevel = 20
+                                        lastPopupTime = System.currentTimeMillis()
+                                        showLowBatteryPopup(batteryPct)
+                                    }
+                                }
+                                batteryPct > 20 -> {
+                                    lastShownLevel = null
+                                }
                             }
-                        }
-                        batteryPct <= 20 && batteryPct > 15 && lastShownLevel != 20 -> {
-                            if (System.currentTimeMillis() - lastPopupTime > POPUP_COOLDOWN) {
-                                lastShownLevel = 20
-                                lastPopupTime = System.currentTimeMillis()
-                                showLowBatteryPopup(batteryPct)
-                            }
-                        }
-                        batteryPct > 20 -> {
-                            lastShownLevel = null
                         }
                     }
                 }
-            }
-        }
 
         val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -125,10 +183,11 @@ class BatteryMonitorService : Service() {
         if (LowBatteryActivity.currentInstance != null) {
             return
         }
-        val intent = Intent(this, LowBatteryActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            putExtra("battery_level", batteryPct)
-        }
+        val intent =
+                Intent(this, LowBatteryActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    putExtra("battery_level", batteryPct)
+                }
         startActivity(intent)
     }
 
@@ -137,8 +196,7 @@ class BatteryMonitorService : Service() {
         batteryReceiver?.let {
             try {
                 unregisterReceiver(it)
-            } catch (e: Exception) {
-            }
+            } catch (e: Exception) {}
         }
     }
 

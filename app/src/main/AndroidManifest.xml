@@ -26,8 +26,10 @@
 
         <activity
             android:name=".LowBatteryActivity"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+            android:exported="true"
+            android:launchMode="singleInstance"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.MaterialComponents.Light.NoActionBar" />
 
         <service
             android:name=".BatteryMonitorService"

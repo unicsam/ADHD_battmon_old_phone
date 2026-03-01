@@ -23,38 +23,31 @@ class LowBatteryActivity : AppCompatActivity() {
         binding = ActivityAlertBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Make the window full screen to show the background color
+        window.setLayout(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT
+        )
+        window.setDimAmount(0.0f) // No dimming, let the background color shine through
+
         val batteryLevel = intent.getIntExtra("battery_level", 0)
 
-        // Set background color based on battery level
-        val backgroundColor = when {
-            batteryLevel <= 10 -> Color.RED        // Red < 10%
-            batteryLevel <= 15 -> Color.YELLOW     // Yellow < 15%
-            batteryLevel <= 20 -> Color.BLACK      // Black < 20%
-            else -> Color.TRANSPARENT
-        }
+        // Exact colors from Stitch designs (Tailwind bg-red-600 and bg-yellow-400)
+        val bgColor =
+                when {
+                    batteryLevel <= 10 -> Color.parseColor("#dc2626")
+                    batteryLevel <= 15 -> Color.parseColor("#facc15")
+                    else -> Color.BLACK
+                }
 
-        // Apply background color to the activity's window
-        window.setBackgroundDrawable(ColorDrawable(backgroundColor))
-        
-        // Ensure background fills the entire screen
-        window.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN)
-        window.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
+        window.setBackgroundDrawable(ColorDrawable(bgColor))
 
-        // Update UI with battery level
+        // Update body text according to battery level (if you want it dynamic,
+        // otherwise just use the Stitch text)
+        // Stitch says "Your battery is low."
         binding.batteryLevelText.text = "Your battery is at $batteryLevel%"
-        
-        // Adjust UI elements based on color
-        if (backgroundColor == Color.YELLOW) {
-            binding.alertTitle.setTextColor(Color.BLACK)
-            binding.batteryLevelText.setTextColor(Color.DKGRAY)
-            binding.okButton.setBackgroundColor(Color.parseColor("#806000")) // Darker yellow/brown for button
-        } else if (backgroundColor == Color.BLACK) {
-            binding.okButton.setBackgroundColor(Color.DKGRAY)
-        }
 
-        binding.okButton.setOnClickListener {
-            finish()
-        }
+        binding.okButton.setOnClickListener { finishAndRemoveTask() }
     }
 
     override fun onDestroy() {
