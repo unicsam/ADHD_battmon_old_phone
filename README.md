@@ -52,7 +52,3 @@ The app displays:
 - Kotlin
 - Android SDK
 - Gradle
-
-## License
-
-MIT License
