@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:gravity="center"
@@ -27,5 +28,25 @@
         android:text="You will receive a popup when battery drops below 20%"
         android:textAlignment="center"
         android:textSize="14sp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/pauseButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:paddingHorizontal="24dp"
+        android:paddingVertical="12dp"
+        android:text="Pause Until Next Charge"
+        android:textAllCaps="false"
+        app:cornerRadius="8dp" />
+
+    <TextView
+        android:id="@+id/pauseStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Currently active"
+        android:textColor="#4CAF50"
+        android:textSize="12sp" />
 
 </LinearLayout>

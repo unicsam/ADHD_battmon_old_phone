@@ -1,0 +1,72 @@
+package com.example.lowbat
+
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.os.Bundle
+import android.view.WindowManager
+import androidx.appcompat.app.AppCompatActivity
+import com.example.lowbat.databinding.ActivityAlertBinding
+
+class LowBatteryActivity : AppCompatActivity() {
+
+    private lateinit var binding: ActivityAlertBinding
+
+    companion object {
+        var currentInstance: LowBatteryActivity? = null
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        currentInstance?.finish()
+        currentInstance = this
+
+        super.onCreate(savedInstanceState)
+        binding = ActivityAlertBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        window.setLayout(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT
+        )
+        window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        window.setDimAmount(0.5f)
+
+        val batteryLevel = intent.getIntExtra("battery_level", 0)
+
+        // Default: Black background (<= 20%)
+        var bgColor = Color.BLACK
+        var btnColor = Color.DKGRAY
+        var btnTextColor = Color.WHITE
+
+        when {
+            batteryLevel <= 10 -> {
+                bgColor = Color.RED
+                btnColor = Color.BLACK // Dark contrast for Red bg
+                btnTextColor = Color.WHITE
+            }
+            batteryLevel <= 15 -> {
+                bgColor = Color.YELLOW
+                btnColor = Color.parseColor("#806000") // Dark Gold for Yellow bg
+                btnTextColor = Color.WHITE
+            }
+        }
+
+        window.setBackgroundDrawable(ColorDrawable(bgColor))
+
+        binding.batteryLevelText.text = "Your battery is at $batteryLevel%"
+        binding.okButton.setBackgroundColor(btnColor)
+        binding.okButton.setTextColor(btnTextColor)
+
+        // Card is white, so these should be dark for readability
+        binding.alertTitle.setTextColor(Color.BLACK)
+        binding.batteryLevelText.setTextColor(Color.DKGRAY)
+
+        binding.okButton.setOnClickListener { finish() }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (currentInstance == this) {
+            currentInstance = null
+        }
+    }
+}

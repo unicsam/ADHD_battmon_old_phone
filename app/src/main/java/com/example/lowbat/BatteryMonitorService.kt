@@ -9,6 +9,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.SharedPreferences
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
@@ -23,10 +24,13 @@ class BatteryMonitorService : Service() {
     private var lastPopupTime: Long = 0
     private val POPUP_COOLDOWN = 5000L
 
+    private lateinit var prefs: SharedPreferences
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
+        prefs = getSharedPreferences(MainActivity.PREFS_NAME, MODE_PRIVATE)
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, createNotification(100))
         registerBatteryReceiver()
@@ -67,6 +71,7 @@ class BatteryMonitorService : Service() {
                 .setProgress(100, batteryPct, false)
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
+                .setAutoCancel(false)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setCategory(NotificationCompat.CATEGORY_SERVICE)
                 .setVisibility(NotificationCompat.VISIBILITY_SECRET)
@@ -93,16 +98,22 @@ class BatteryMonitorService : Service() {
                                         -1
                                     }
 
-                            // If charging, close any existing popup and update notification
+                            // If charging, close any existing popup, resume alerts, and update notification
                             if (isCharging) {
                                 LowBatteryActivity.currentInstance?.finishAndRemoveTask()
                                 lastShownLevel = null
+                                prefs.edit().putBoolean(MainActivity.KEY_PAUSED, false).apply()
                                 val notificationManager =
                                         getSystemService(NotificationManager::class.java)
                                 notificationManager.notify(
                                         NOTIFICATION_ID,
                                         createNotification(batteryPct)
                                 )
+                                return
+                            }
+
+                            // Check if alerts are paused
+                            if (prefs.getBoolean(MainActivity.KEY_PAUSED, false)) {
                                 return
                             }
 
@@ -202,5 +213,15 @@ class BatteryMonitorService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         return START_STICKY
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        val restartIntent = Intent(this, BatteryMonitorService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(restartIntent)
+        } else {
+            startService(restartIntent)
+        }
+        super.onTaskRemoved(rootIntent)
     }
 }
