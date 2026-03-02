@@ -65,7 +65,9 @@ class BatteryMonitorService : Service() {
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
 
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        val channelId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) CHANNEL_ID else ""
+
+        return NotificationCompat.Builder(this, channelId)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentTitle("Battery $batteryPct%")
                 .setProgress(100, batteryPct, false)
