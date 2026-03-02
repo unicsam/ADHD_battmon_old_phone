@@ -310,7 +310,7 @@ class BatteryMonitorService : Service() {
         }
 
         if (isScreenLocked() || !isScreenOn) {
-            if (batteryPct >= 5) {
+            if (batteryPct > 5) {
                 playDoubleBeep()
                 scheduleNextBeep(batteryPct)
             }

@@ -19,7 +19,7 @@ class BeepReceiver : BroadcastReceiver() {
         context?.let { ctx ->
             val batteryPct = intent?.getIntExtra("battery_level", 15) ?: 15
             
-            if (batteryPct >= 5) {
+            if (batteryPct > 5) {
                 playDoubleBeep(ctx)
                 scheduleNextBeep(ctx, batteryPct)
             }
