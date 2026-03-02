@@ -32,7 +32,8 @@ class BatteryMonitorService : Service() {
     private var lastShownLevel: Int? = null
     private var lastPopupTime: Long = 0
     private val POPUP_COOLDOWN = 5000L
-    private val BEEP_INTERVAL_MS = 300000L // 5 minutes
+    private val BEEP_INTERVAL_10_PERCENT = 600000L // 10 minutes
+    private val BEEP_INTERVAL_5_PERCENT = 300000L // 5 minutes
 
     private lateinit var prefs: SharedPreferences
     private var isScreenOn = true
@@ -90,8 +91,10 @@ class BatteryMonitorService : Service() {
         return keyguardManager.isKeyguardLocked
     }
 
-    private fun scheduleNextBeep() {
-        val intent = Intent(this, BeepReceiver::class.java)
+    private fun scheduleNextBeep(batteryPct: Int) {
+        val intent = Intent(this, BeepReceiver::class.java).apply {
+            putExtra("battery_level", batteryPct)
+        }
         val pendingIntent = PendingIntent.getBroadcast(
             this,
             BEEP_ALARM_REQUEST_CODE,
@@ -99,7 +102,12 @@ class BatteryMonitorService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val triggerTime = System.currentTimeMillis() + BEEP_INTERVAL_MS
+        val intervalMs = when {
+            batteryPct < 10 -> BEEP_INTERVAL_10_PERCENT
+            else -> BEEP_INTERVAL_5_PERCENT
+        }
+
+        val triggerTime = System.currentTimeMillis() + intervalMs
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (alarmManager?.canScheduleExactAlarms() == true) {
@@ -302,8 +310,10 @@ class BatteryMonitorService : Service() {
         }
 
         if (isScreenLocked() || !isScreenOn) {
-            playDoubleBeep()
-            scheduleNextBeep()
+            if (batteryPct >= 5) {
+                playDoubleBeep()
+                scheduleNextBeep(batteryPct)
+            }
             return
         }
 
