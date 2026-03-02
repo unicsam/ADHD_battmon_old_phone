@@ -12,40 +12,47 @@ People with ADHD often:
 ## How It Helps
 
 This app solves that by:
+1. **Persistent Notification** - Shows battery level with a progress bar
+2. **Loud Popup Alerts** - Full-screen warning dialogs at critical battery levels
+3. **Smart Beep Alerts** - When screen is locked and popup can't show:
+   - Battery 11-19%: Beeps every 5 minutes, device sleeps between beeps
+   - Battery 6-10%: Beeps every 10 minutes, device sleeps between beeps
+   - Battery ≤5%: Stops all alerts to preserve remaining battery
+4. **Charging Detection** - Automatically dismisses warnings when charger is plugged in
 
-1. **Persistent Notification** - Shows battery level with a progress bar in the notification area (not just in drawer)
-2. **Loud Popup Alerts** - Displays prominent warning dialogs at battery levels: 20%, 15%, 10%, 8%, 6%, 4%, and 2%
-3. **Visual Warnings** - Different background colors (red/yellow) make it impossible to miss
-4. **Charging Detection** - Automatically dismisses warnings when you plug in your charger
+## Alert Flow
+
+| Battery Level | Screen Unlocked | Screen Locked |
+|---------------|-----------------|---------------|
+| 20%-15% | Show popup | Beep |
+| 15%-10% | Show popup | Beep |
+| 10%-6% | Show popup | Beep every 10 min |
+| 5%-0% | Show popup | No alerts (sleep) |
 
 ## Features
 
 - Background service monitors battery continuously
-- Visual popup alerts at critical battery levels
+- Visual popup alerts at: 20%, 15%, 10%, 8%, 6%, 4%, 2%
+- Smart beeping that doesn't drain battery (device sleeps between beeps)
 - Notification shows battery percentage with progress bar
-- Warns at: 20% → 15% → 10% → 8% → 6% → 4% → 2%
 - Closes popup when charging starts
-- Works while phone is locked
-- Lightweight (only ~5MB, minimal RAM usage)
-
-## Screenshots
-
-The app displays:
-- A notification with battery percentage and progress bar
-- Full-screen warning dialogs with colored backgrounds
+- Works on Android 5.0+ (API 21+)
+- Lightweight (~5MB)
 
 ## Installation
 
 1. Download the APK from Releases
 2. Enable "Install from unknown sources"
 3. Open the APK to install
-4. Grant required permissions (notification, overlay)
+4. Grant required permissions
 
 ## Permissions Required
 
 - `POST_NOTIFICATIONS` - To show battery notifications
 - `SYSTEM_ALERT_WINDOW` - To display popup warnings over other apps
 - `FOREGROUND_SERVICE` - To run in background
+- `SCHEDULE_EXACT_ALARM` - For smart beep scheduling
+- `VIBRATE` - For haptic feedback
 
 ## Tech Stack
 

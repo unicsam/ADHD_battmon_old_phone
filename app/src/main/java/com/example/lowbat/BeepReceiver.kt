@@ -17,12 +17,37 @@ class BeepReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context?, intent: Intent?) {
         context?.let { ctx ->
-            val batteryPct = intent?.getIntExtra("battery_level", 15) ?: 15
+            val currentBatteryPct = getCurrentBatteryLevel(ctx)
             
-            if (batteryPct > 5) {
+            if (currentBatteryPct > 5) {
                 playDoubleBeep(ctx)
-                scheduleNextBeep(ctx, batteryPct)
+                scheduleNextBeep(ctx, currentBatteryPct)
+            } else {
+                cancelBeepAlarm(ctx)
             }
+        }
+    }
+
+    private fun cancelBeepAlarm(context: Context) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+        val intent = Intent(context, BeepReceiver::class.java)
+        val pendingIntent = android.app.PendingIntent.getBroadcast(
+            context,
+            1001,
+            intent,
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager.cancel(pendingIntent)
+    }
+
+    private fun getCurrentBatteryLevel(context: Context): Int {
+        return try {
+            val batteryIntent = context.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
+            val level = batteryIntent?.getIntExtra("level", -1) ?: -1
+            val scale = batteryIntent?.getIntExtra("scale", -1) ?: -1
+            if (level >= 0 && scale > 0) (level * 100) / scale else 15
+        } catch (e: Exception) {
+            15
         }
     }
 

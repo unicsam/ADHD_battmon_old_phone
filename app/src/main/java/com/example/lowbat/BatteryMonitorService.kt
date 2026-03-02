@@ -313,6 +313,8 @@ class BatteryMonitorService : Service() {
             if (batteryPct > 5) {
                 playDoubleBeep()
                 scheduleNextBeep(batteryPct)
+            } else {
+                cancelBeepAlarm()
             }
             return
         }
