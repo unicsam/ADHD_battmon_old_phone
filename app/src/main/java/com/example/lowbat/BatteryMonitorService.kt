@@ -31,7 +31,7 @@ class BatteryMonitorService : Service() {
     private var lastShownLevel: Int? = null
     private var lastPopupTime: Long = 0
     private val POPUP_COOLDOWN = 5000L
-    private val BEEP_INTERVAL_MS = 60000L // 1 minute
+    private val BEEP_INTERVAL_MS = 300000L // 5 minutes
 
     private lateinit var prefs: SharedPreferences
     private var isScreenOn = true
