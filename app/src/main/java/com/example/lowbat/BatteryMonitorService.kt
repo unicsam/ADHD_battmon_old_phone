@@ -1,5 +1,6 @@
 package com.example.lowbat
 
+import android.app.AlarmManager
 import android.app.KeyguardManager
 import android.app.Notification
 import android.app.NotificationChannel
@@ -11,7 +12,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
-import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.Build
@@ -25,6 +25,7 @@ class BatteryMonitorService : Service() {
 
     private val CHANNEL_ID = "battery_monitor_channel"
     private val NOTIFICATION_ID = 1
+    private val BEEP_ALARM_REQUEST_CODE = 1001
 
     private var batteryReceiver: BroadcastReceiver? = null
     private var screenReceiver: BroadcastReceiver? = null
@@ -35,9 +36,8 @@ class BatteryMonitorService : Service() {
 
     private lateinit var prefs: SharedPreferences
     private var isScreenOn = true
-    private var beepHandler: Handler? = null
-    private var beepRunnable: Runnable? = null
     private var toneGenerator: ToneGenerator? = null
+    private var alarmManager: AlarmManager? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -48,6 +48,8 @@ class BatteryMonitorService : Service() {
         startForeground(NOTIFICATION_ID, createNotification(100))
         registerBatteryReceiver()
         registerScreenReceiver()
+        
+        alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
         
         try {
             toneGenerator = ToneGenerator(AudioManager.STREAM_ALARM, 100)
@@ -62,15 +64,14 @@ class BatteryMonitorService : Service() {
                 when (intent?.action) {
                     Intent.ACTION_SCREEN_ON -> {
                         isScreenOn = true
-                        stopBeeping()
+                        cancelBeepAlarm()
                     }
                     Intent.ACTION_SCREEN_OFF -> {
                         isScreenOn = false
-                        startBeepingIfNeeded()
                     }
                     Intent.ACTION_USER_PRESENT -> {
                         isScreenOn = true
-                        stopBeeping()
+                        cancelBeepAlarm()
                     }
                 }
             }
@@ -89,23 +90,43 @@ class BatteryMonitorService : Service() {
         return keyguardManager.isKeyguardLocked
     }
 
-    private fun startBeepingIfNeeded() {
-        if (beepHandler != null) return
-        
-        beepHandler = Handler(Looper.getMainLooper())
-        beepRunnable = object : Runnable {
-            override fun run() {
-                playDoubleBeep()
-                beepHandler?.postDelayed(this, BEEP_INTERVAL_MS)
+    private fun scheduleNextBeep() {
+        val intent = Intent(this, BeepReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(
+            this,
+            BEEP_ALARM_REQUEST_CODE,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val triggerTime = System.currentTimeMillis() + BEEP_INTERVAL_MS
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (alarmManager?.canScheduleExactAlarms() == true) {
+                alarmManager?.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerTime,
+                    pendingIntent
+                )
             }
+        } else {
+            alarmManager?.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                triggerTime,
+                pendingIntent
+            )
         }
-        beepHandler?.post(beepRunnable!!)
     }
 
-    private fun stopBeeping() {
-        beepRunnable?.let { beepHandler?.removeCallbacks(it) }
-        beepRunnable = null
-        beepHandler = null
+    private fun cancelBeepAlarm() {
+        val intent = Intent(this, BeepReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(
+            this,
+            BEEP_ALARM_REQUEST_CODE,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager?.cancel(pendingIntent)
     }
 
     private fun playDoubleBeep() {
@@ -281,11 +302,12 @@ class BatteryMonitorService : Service() {
         }
 
         if (isScreenLocked() || !isScreenOn) {
-            startBeepingIfNeeded()
+            playDoubleBeep()
+            scheduleNextBeep()
             return
         }
 
-        stopBeeping()
+        cancelBeepAlarm()
         val intent =
                 Intent(this, LowBatteryActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -306,7 +328,7 @@ class BatteryMonitorService : Service() {
                 unregisterReceiver(it)
             } catch (e: Exception) {}
         }
-        stopBeeping()
+        cancelBeepAlarm()
         toneGenerator?.release()
     }
 
